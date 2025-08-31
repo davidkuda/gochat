@@ -192,6 +192,15 @@ func msgHTML(text string) string {
 	return fmt.Sprintf(`<p id="messagesContainer" class="msg" hx-swap-oob="beforeend">%s</p>`, html.EscapeString(text))
 }
 
+func userCountHTML(n int) string {
+	txt := fmt.Sprintf("%d user", n)
+	if n != 1 {
+		txt += "s"
+	}
+	txt += " online"
+	return fmt.Sprintf(`<span id="userCount" hx-swap-oob="outerHTML" class="user-count">%s</span>`, txt)
+}
+
 func broadcast(data []byte) {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
@@ -277,6 +286,9 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 	}
 	broadcast(buf.Bytes())
 
+	frag := userCountHTML(len(clients))
+	broadcast([]byte(frag))
+
 	for {
 		_, data, err := conn.ReadMessage()
 		if err != nil {
@@ -314,4 +326,7 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	broadcast(byebuf.Bytes())
+	fragLeft := userCountHTML(len(clients))
+	broadcast([]byte(fragLeft))
+
 }
