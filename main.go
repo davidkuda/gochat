@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"html"
 	"html/template"
 	"log"
 	"net/http"
@@ -151,6 +152,16 @@ type JoinRequest struct {
 	Gender string `json:"gender"`
 }
 
+func msgHTML(text string) string {
+    return fmt.Sprintf(`<p id="messagesContainer" class="msg" hx-swap-oob="beforeend">%s</p>`, html.EscapeString(text))
+}
+
+func broadcastHTML(fragment string) {
+    for c := range clients {
+        _ = c.Conn.WriteMessage(websocket.TextMessage, []byte(fragment))
+    }
+}
+
 func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 	var msg string
 
@@ -192,6 +203,9 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 	// joinsTotal.WithLabelValues(c.Gender).Inc()
 	msg = fmt.Sprintf("🟢 %s (%s) joined", c.Name, c.Gender)
+	frag := msgHTML(msg)
+	log.Printf("sending: %s", frag)
+	broadcastHTML(frag)
 	broadcast([]byte(msg))
 
 	for {

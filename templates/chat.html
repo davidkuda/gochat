@@ -1,5 +1,11 @@
 {{ define "main" }}
-<div class="chat-container" hx-ext="ws" ws-connect="/ws">
+<div
+  class="chat-container"
+  hx-ext="ws"
+  ws-connect="/ws"
+  hx-target="#messagesContainer"
+  hx-swap="beforeend"
+>
   <div class="chat-header">
     <hgroup>
       <h2>General Chat</h2>
