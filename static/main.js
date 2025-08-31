@@ -8,6 +8,7 @@ let userData = {
 
 // HTMX event handlers
 function handleLoginResponse(event) {
+	console.log("I get logged")
 	const response = event.detail.xhr.response;
 
 	if (event.detail.xhr.status === 200) {

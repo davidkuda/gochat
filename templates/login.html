@@ -9,13 +9,10 @@
     <form
       class="login-form"
       hx-get="/chat"
-      hx-target="#loginResponse"
-      hx-swap="innerHTML"
-      hx-trigger="submit"
-      hx-on::after-request="handleLoginResponse(event)"
+      hx-target="#loginScreen"
+      hx-swap="outerHTML"
+      hx-push-url="true"
     >
-      <div id="loginResponse"></div>
-
       <div class="form-group">
         <label for="nameInput" class="form-label">Your Name</label>
         <input

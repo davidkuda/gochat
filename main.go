@@ -18,9 +18,10 @@ var (
 	upgrader  = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
-	base  *template.Template
-	login *template.Template
-	chat  *template.Template
+	baseLogin *template.Template
+	baseChat  *template.Template
+	login     *template.Template
+	chat      *template.Template
 )
 
 func main() {
@@ -43,7 +44,7 @@ func main() {
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
 	buf := bytes.Buffer{}
-	err := login.ExecuteTemplate(&buf, "base", nil)
+	err := baseLogin.ExecuteTemplate(&buf, "base", nil)
 	if err != nil {
 		log.Printf("failed executing template during handling %s %s: %e\n", r.Method, r.URL.Path, err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -55,12 +56,26 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 
 func handleChat(w http.ResponseWriter, r *http.Request) {
 	buf := bytes.Buffer{}
-	err := chat.ExecuteTemplate(&buf, "base", nil)
-	if err != nil {
-		log.Printf("failed executing template during handling %s %s: %e\n", r.Method, r.URL.Path, err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
+
+	isHTMX := r.Header.Get("HX-Request") == "true"
+	log.Println(isHTMX)
+
+	if isHTMX {
+		err := chat.ExecuteTemplate(&buf, "main", nil)
+		if err != nil {
+			log.Printf("failed executing template during handling %s %s: %e\n", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		err := baseChat.ExecuteTemplate(&buf, "base", nil)
+		if err != nil {
+			log.Printf("failed executing template during handling %s %s: %e\n", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
 	}
+
 	w.WriteHeader(http.StatusOK)
 	buf.WriteTo(w)
 }
@@ -70,36 +85,6 @@ type Client struct {
 	Gender string // Male Female Other
 	Conn   *websocket.Conn
 	mu     sync.Mutex
-}
-
-// parses templates into global vars
-func prepareTemplates() {
-	prepareTemplateBaseLogin()
-	prepareTemplateBaseChat()
-}
-
-func prepareTemplateBaseLogin() {
-	templates := make([]string, 2)
-	templates[0] = "./templates/base.html"
-	templates[1] = "./templates/login.html"
-	tmpl := template.New("base")
-	t, err := tmpl.ParseFiles(templates...)
-	if err != nil {
-		log.Fatalf("failed parsing templates: %e", err)
-	}
-	login = t
-}
-
-func prepareTemplateBaseChat() {
-	templates := make([]string, 2)
-	templates[0] = "./templates/base.html"
-	templates[1] = "./templates/chat.html"
-	tmpl := template.New("base")
-	t, err := tmpl.ParseFiles(templates...)
-	if err != nil {
-		log.Fatalf("failed parsing templates: %e", err)
-	}
-	chat = t
 }
 
 func broadcast(data []byte) {
