@@ -35,6 +35,7 @@ var (
 
 func main() {
 	addr := flag.String("addr", "localhost:8404", "HTTP network address")
+	flag.Parse()
 
 	prepareTemplates()
 
