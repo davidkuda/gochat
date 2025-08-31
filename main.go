@@ -1,3 +1,7 @@
+// TODO:
+// - [ ] what happens if two people use the same name? probably just an error in the map, but needs handling.
+// - [ ] number of users
+
 package main
 
 import (

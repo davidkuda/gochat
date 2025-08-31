@@ -1,18 +1,16 @@
 {{ define "main" }}
-<div
-  hx-swap-oob="beforeend"
-  id="messagesContainer"
-  class="message {{ if .Own }}own{{ else }}other{{ end }}"
->
-  <div class="avatar {{ if .Own }}own{{ else }}other{{ end }}">
-    {{ .Avatar }}
-  </div>
-  <div class="message-content">
-    <div class="message-header">
-      <span class="username own">{{ .Name }}</span>
-      <span class="timestamp">{{ .Time }}</span>
+<div hx-swap-oob="beforeend" id="messagesContainer">
+  <div class="message {{ if .Own }}own{{ else }}other{{ end }}">
+    <div class="avatar {{ if .Own }}own{{ else }}other{{ end }}">
+      {{ .Avatar }}
     </div>
-    <div class="message-text">{{ .Message }}</div>
+    <div class="message-content">
+      <div class="message-header">
+        <span class="username own">{{ .Name }}</span>
+        <span class="timestamp">{{ .Time }}</span>
+      </div>
+      <div class="message-text">{{ .Message }}</div>
+    </div>
   </div>
 </div>
 {{ end }}
