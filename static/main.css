@@ -56,6 +56,8 @@ body {
 	background: white;
 	border-bottom: 1px solid #e2e8f0;
 	padding: 1rem;
+	display: flex;
+	justify-content: space-between;
 }
 
 .chat-header h2 {
@@ -71,6 +73,7 @@ body {
 }
 
 .user-count {
+	height: max-content;
 	display: inline-flex;
 	align-items: center;
 	gap: 0.5rem;
