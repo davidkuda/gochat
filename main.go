@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"html/template"
@@ -54,21 +55,52 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	buf.WriteTo(w)
 }
 
+type ChatTemplate struct {
+	Name   string
+	Gender string
+}
+
+func newChatTemplate(name, gender string) (ChatTemplate, error) {
+	var errorMsg string
+	if name == "" {
+		errorMsg = errorMsg + "name is an empty string;"
+	}
+	if len(name) > 42 {
+		errorMsg = errorMsg + "name is more than 42 chars;"
+	}
+	log.Println(gender)
+	if gender != "male" && gender != "female" && gender != "other" {
+		errorMsg = errorMsg + "invalid gender"
+	}
+	if errorMsg != "" {
+		return ChatTemplate{}, fmt.Errorf("invalid args: %v", errorMsg)
+	}
+	return ChatTemplate{name, gender}, nil
+}
+
 func handleChat(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	name, gender := q.Get("name"), q.Get("gender")
+	t, err := newChatTemplate(name, gender)
+	if err != nil {
+		log.Printf("failed newChatTemplate(%s, %s) during handling %s %s: %e\n", name, gender, r.Method, r.URL.Path, err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
 	buf := bytes.Buffer{}
 
 	isHTMX := r.Header.Get("HX-Request") == "true"
-	log.Println(isHTMX)
 
 	if isHTMX {
-		err := chat.ExecuteTemplate(&buf, "main", nil)
+		err := chat.ExecuteTemplate(&buf, "main", t)
 		if err != nil {
 			log.Printf("failed executing template during handling %s %s: %e\n", r.Method, r.URL.Path, err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 	} else {
-		err := baseChat.ExecuteTemplate(&buf, "base", nil)
+		err := baseChat.ExecuteTemplate(&buf, "base", t)
 		if err != nil {
 			log.Printf("failed executing template during handling %s %s: %e\n", r.Method, r.URL.Path, err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -97,30 +129,47 @@ func broadcast(data []byte) {
 	}
 }
 
+type JoinRequest struct {
+	Name   string `json:"name"`
+	Gender string `json:"gender"`
+}
+
 func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 	var msg string
-
-	name := r.URL.Query().Get("name")
-	if name == "" {
-		http.Error(w, "missing ?name=...", http.StatusBadRequest)
-		// TODO: render login form
-		// with a toast that invalid creds
-		return
-	}
-	gender := r.URL.Query().Get("gender")
-	if name == "" {
-		http.Error(w, "missing ?gender=...", http.StatusBadRequest)
-		// TODO: render login form
-		// with a toast that invalid creds
-		return
-	}
+	log.Println("logme")
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("upgrade:", err)
 		return
 	}
-	c := &Client{Name: name, Gender: gender, Conn: conn}
+
+	// Read the very first message from HTMX (the <div ws-send> payload)
+	_, data, err := conn.ReadMessage()
+	if err != nil {
+		log.Println("read error:", err)
+		return
+	}
+
+	var req JoinRequest
+	if err := json.Unmarshal(data, &req); err != nil {
+		log.Println("invalid json:", string(data))
+		_ = conn.WriteMessage(websocket.TextMessage, []byte(`{"error":"invalid join request"}`))
+		conn.Close()
+		return
+	}
+	fmt.Println(req)
+
+	if req.Name == "" || req.Gender == "" {
+		log.Println("missing fields:", req)
+		_ = conn.WriteMessage(websocket.TextMessage, []byte(`{"error":"missing name or gender"}`))
+		conn.Close()
+		return
+	}
+
+	log.Printf("✅ user joined: name=%s gender=%s\n", req.Name, req.Gender)
+
+	c := &Client{Name: req.Name, Gender: req.Gender, Conn: conn}
 
 	clientsMu.Lock()
 	clients[c] = true

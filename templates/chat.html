@@ -12,8 +12,12 @@
       class="messages-container"
       id="messagesContainer"
       hx-ext="ws"
-      ws-connect="/ws/chat"
+      ws-connect="/ws"
     >
+  <form ws-send hx-trigger="load">
+    <input type="hidden" name="name" value="{{ .Name }}">
+    <input type="hidden" name="gender" value="{{ .Gender }}">
+  </form>
       <div class="message">
         <div class="avatar other">A</div>
         <div class="message-content">
@@ -73,5 +77,4 @@
       </form>
     </div>
   </div>
-</div>
 {{ end }}
