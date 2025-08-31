@@ -1,0 +1,9 @@
+{{ define "main" }}
+<div id="messagesContainer" hx-swap-oob="beforeend">
+  <div class="system-row leave" role="status" aria-live="polite">
+    <span class="dot"></span>
+    <span><strong>{{ .Name }}</strong> ({{ .Gender }}) left</span>
+    <span class="time">{{ .LeftStr }}</span>
+  </div>
+</div>
+{{ end }}

@@ -75,3 +75,13 @@ func prepareTemplatePartialNewMember() *template.Template {
 	// partialMsg = t
 	return t
 }
+
+func prepareTemplatePartialByeMember() *template.Template {
+	tmpl := template.New("main")
+	t, err := tmpl.ParseFiles("./templates/partial.bye-member.html")
+	if err != nil {
+		log.Fatalf("failed parsing templates: %e", err)
+	}
+	// partialMsg = t
+	return t
+}

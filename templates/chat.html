@@ -46,7 +46,7 @@
       ws-send
       hx-target="#messagesContainer"
       hx-swap="beforeend"
-      hx-on::wsAfterSend="this.reset()"
+      hx-on::ws-after-send="this.querySelector('#messageInput').value=''; this.querySelector('#messageInput').focus()"
     >
       <input
         type="text"
@@ -55,6 +55,7 @@
         name="message"
         placeholder="Type a message..."
         required
+        autofocus
       />
       <input type="hidden" name="name" value="{{ .Name }}" />
       <button type="submit" class="send-button">

@@ -138,6 +138,8 @@ type Client struct {
 	Gender    string // Male Female Other
 	Joined    time.Time
 	JoinedStr string
+	Left      time.Time
+	LeftStr   string
 	Conn      *websocket.Conn
 	mu        sync.Mutex
 }
@@ -222,8 +224,6 @@ func broadcastMessage(msg WSMessage) {
 }
 
 func handleWebsocket(w http.ResponseWriter, r *http.Request) {
-	var msg string
-
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("upgrade:", err)
@@ -301,6 +301,17 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 	delete(clients, c)
 	clientsMu.Unlock()
 	_ = conn.Close()
-	msg = fmt.Sprintf("🔴 %s (%s) left", c.Name, c.Gender)
-	broadcast([]byte(msg))
+
+	now = time.Now()
+	c.Left = now
+	c.LeftStr = now.Format("15:04")
+	bye := prepareTemplatePartialByeMember()
+	byebuf := bytes.Buffer{}
+	err = bye.ExecuteTemplate(&byebuf, "main", c)
+	if err != nil {
+		log.Println("failed executing message template:", err)
+		// TODO: to tired to do error handling here, its past midnight
+		return
+	}
+	broadcast(byebuf.Bytes())
 }
