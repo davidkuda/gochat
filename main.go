@@ -68,7 +68,6 @@ func newChatTemplate(name, gender string) (ChatTemplate, error) {
 	if len(name) > 42 {
 		errorMsg = errorMsg + "name is more than 42 chars;"
 	}
-	log.Println(gender)
 	if gender != "male" && gender != "female" && gender != "other" {
 		errorMsg = errorMsg + "invalid gender"
 	}
@@ -76,6 +75,24 @@ func newChatTemplate(name, gender string) (ChatTemplate, error) {
 		return ChatTemplate{}, fmt.Errorf("invalid args: %v", errorMsg)
 	}
 	return ChatTemplate{name, gender}, nil
+}
+
+type WSMessage struct {
+	Message string        `json:"message"`
+	Headers WSMessageMeta `json:"HEADERS"`
+}
+
+type WSMessageMeta struct {
+	HXRequest     string `json:"HX-Request"`
+	HXTrigger     string `json:"HX-Trigger"`
+	HXTriggerName string `json:"HX-Trigger-Name"`
+	HXTarget      string `json:"HX-Target"`
+	HXCurrentURL  string `json:"HX-Current-URL"`
+}
+
+type WSTemplate struct {
+	Name string
+	Own  bool
 }
 
 func handleChat(w http.ResponseWriter, r *http.Request) {
@@ -136,7 +153,6 @@ type JoinRequest struct {
 
 func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 	var msg string
-	log.Println("logme")
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -158,7 +174,6 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 		conn.Close()
 		return
 	}
-	fmt.Println(req)
 
 	if req.Name == "" || req.Gender == "" {
 		log.Println("missing fields:", req)
@@ -186,8 +201,20 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 		}
 		// messagesTotal.WithLabelValues(c.Gender).Inc()
 		// TODO:send htmx here
-		msg = fmt.Sprintf("%s: %s", c.Name, string(data))
-		broadcast([]byte(msg))
+		msg2 := fmt.Sprintf("%s: %s", c.Name, string(data))
+		log.Println(msg2)
+
+		var msg WSMessage
+		if err := json.Unmarshal(data, &msg); err != nil {
+			log.Println("unmarshal error:", err, string(data))
+			return
+		}
+
+		log.Printf("%s said: %s",
+			c.Name,
+			msg.Message,
+		)
+		broadcast([]byte(msg2))
 	}
 
 	clientsMu.Lock()
