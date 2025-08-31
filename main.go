@@ -85,6 +85,7 @@ func newChatTemplate(name, gender string) (ChatTemplate, error) {
 }
 
 type WSMessage struct {
+	Name    string        `json:"name"`
 	Message string        `json:"message"`
 	Headers WSMessageMeta `json:"HEADERS"`
 }
@@ -152,6 +153,8 @@ type MessageTemplate struct {
 }
 
 func newMessageTemplate(clientName, name, message string) MessageTemplate {
+	log.Println("ASIMOV:")
+	log.Println(clientName, name)
 	var own bool
 	if clientName == name {
 		own = true
@@ -178,6 +181,27 @@ func broadcast(data []byte) {
 		c.mu.Lock()
 		defer c.mu.Unlock()
 		_ = c.Conn.WriteMessage(websocket.TextMessage, data)
+	}
+}
+
+func broadcastMessage(msg WSMessage) {
+	clientsMu.Lock()
+	defer clientsMu.Unlock()
+	for c := range clients {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+
+		t := newMessageTemplate(c.Name, msg.Name, msg.Message)
+		buf := bytes.Buffer{}
+
+		err := partialMsg.ExecuteTemplate(&buf, "main", t)
+		if err != nil {
+			log.Println("failed executing message template:", err)
+			// TODO: to tired to do error handling here, its past midnight
+			return
+		}
+
+		_ = c.Conn.WriteMessage(websocket.TextMessage, buf.Bytes())
 	}
 }
 
@@ -250,22 +274,7 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Printf("%s said: %s",
-			c.Name,
-			msg.Message,
-		)
-
-		t := newMessageTemplate(c.Name, c.Name, msg.Message)
-		buf := bytes.Buffer{}
-
-		err = partialMsg.ExecuteTemplate(&buf, "main", t)
-		if err != nil {
-			log.Println("failed executing message template:", err)
-			// TODO: to tired to do error handling here, its past midnight
-			return
-		}
-
-		broadcast(buf.Bytes())
+		broadcastMessage(msg)
 	}
 
 	clientsMu.Lock()
