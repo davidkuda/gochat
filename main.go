@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -20,10 +21,11 @@ var (
 	upgrader  = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
-	baseLogin *template.Template
-	baseChat  *template.Template
-	login     *template.Template
-	chat      *template.Template
+	baseLogin  *template.Template
+	baseChat   *template.Template
+	login      *template.Template
+	chat       *template.Template
+	partialMsg *template.Template
 )
 
 func main() {
@@ -91,11 +93,6 @@ type WSMessageMeta struct {
 	HXCurrentURL  string `json:"HX-Current-URL"`
 }
 
-type WSTemplate struct {
-	Name string
-	Own  bool
-}
-
 func handleChat(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	name, gender := q.Get("name"), q.Get("gender")
@@ -137,6 +134,39 @@ type Client struct {
 	mu     sync.Mutex
 }
 
+type JoinRequest struct {
+	Name   string `json:"name"`
+	Gender string `json:"gender"`
+}
+
+type MessageTemplate struct {
+	Name    string
+	Message string
+	Own     bool
+	Avatar  string
+	Time    string
+}
+
+func newMessageTemplate(clientName, name, message string) MessageTemplate {
+	var own bool
+	if clientName == name {
+		own = true
+	}
+	time := time.Now().Format("15:04")
+
+	return MessageTemplate{
+		Name:    name,
+		Message: message,
+		Own:     own,
+		Time:    time,
+		Avatar:  string(name[0]),
+	}
+}
+
+func msgHTML(text string) string {
+	return fmt.Sprintf(`<p id="messagesContainer" class="msg" hx-swap-oob="beforeend">%s</p>`, html.EscapeString(text))
+}
+
 func broadcast(data []byte) {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
@@ -147,19 +177,10 @@ func broadcast(data []byte) {
 	}
 }
 
-type JoinRequest struct {
-	Name   string `json:"name"`
-	Gender string `json:"gender"`
-}
-
-func msgHTML(text string) string {
-    return fmt.Sprintf(`<p id="messagesContainer" class="msg" hx-swap-oob="beforeend">%s</p>`, html.EscapeString(text))
-}
-
 func broadcastHTML(fragment string) {
-    for c := range clients {
-        _ = c.Conn.WriteMessage(websocket.TextMessage, []byte(fragment))
-    }
+	for c := range clients {
+		_ = c.Conn.WriteMessage(websocket.TextMessage, []byte(fragment))
+	}
 }
 
 func handleWebsocket(w http.ResponseWriter, r *http.Request) {
@@ -213,6 +234,7 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			break
 		}
+
 		// messagesTotal.WithLabelValues(c.Gender).Inc()
 		// TODO:send htmx here
 		msg2 := fmt.Sprintf("%s: %s", c.Name, string(data))
@@ -228,7 +250,18 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 			c.Name,
 			msg.Message,
 		)
-		broadcast([]byte(msg2))
+
+		t := newMessageTemplate(c.Name, c.Name, msg.Message)
+		buf := bytes.Buffer{}
+
+		err = partialMsg.ExecuteTemplate(&buf, "main", t)
+		if err != nil {
+			log.Println("failed executing message template:", err)
+			// TODO: to tired to do error handling here, its past midnight
+			return
+		}
+
+		broadcast(buf.Bytes())
 	}
 
 	clientsMu.Lock()

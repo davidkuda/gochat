@@ -11,6 +11,7 @@ func prepareTemplates() {
 	prepareTemplateBaseChat()
 	prepareTemplateLogin()
 	prepareTemplateChat()
+	prepareTemplatePartialMessage()
 }
 
 func prepareTemplateBaseLogin() {
@@ -53,4 +54,13 @@ func prepareTemplateChat() {
 		log.Fatalf("failed parsing templates: %e", err)
 	}
 	chat = t
+}
+
+func prepareTemplatePartialMessage() {
+	tmpl := template.New("main")
+	t, err := tmpl.ParseFiles("./templates/partial.message.html")
+	if err != nil {
+		log.Fatalf("failed parsing templates: %e", err)
+	}
+	partialMsg = t
 }
