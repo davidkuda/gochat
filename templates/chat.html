@@ -1,0 +1,83 @@
+{{ define "main" }}
+<div id="chatScreen" class="chat-screen">
+  <div class="header">
+    <h1>Simple Chat</h1>
+    <p>A clean and simple chat interface</p>
+  </div>
+
+  <div class="chat-container">
+    <div class="chat-header">
+      <h2>General Chat</h2>
+      <p>
+        Welcome to the conversation
+        <span class="user-count" id="userCount">3 users online</span>
+      </p>
+    </div>
+
+    <div
+      class="messages-container"
+      id="messagesContainer"
+      hx-ext="ws"
+      ws-connect="/ws/chat"
+    >
+      <div class="message">
+        <div class="avatar other">A</div>
+        <div class="message-content">
+          <div class="message-header">
+            <span class="username">Alice</span>
+            <span class="timestamp">2:30 PM</span>
+          </div>
+          <div class="message-text">Hey everyone! How's your day going?</div>
+        </div>
+      </div>
+
+      <div class="message">
+        <div class="avatar other">B</div>
+        <div class="message-content">
+          <div class="message-header">
+            <span class="username">Bob</span>
+            <span class="timestamp">2:31 PM</span>
+          </div>
+          <div class="message-text">
+            Pretty good! Just working on some new features. What about you?
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-container">
+      <form
+        class="input-form"
+        hx-post="/api/messages"
+        hx-trigger="submit"
+        hx-target="#messagesContainer"
+        hx-swap="beforeend"
+        hx-on::after-request="clearMessageInput()"
+      >
+        <input
+          type="text"
+          class="message-input"
+          id="messageInput"
+          name="message"
+          placeholder="Type a message..."
+          required
+        />
+        <input type="hidden" name="user_id" id="userId" />
+        <button type="submit" class="send-button">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22,2 15,22 11,13 2,9"></polygon>
+          </svg>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{{ end }}

@@ -1,0 +1,17 @@
+{{ define "base" }}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simple Chat</title>
+    <meta name="description" content="Noser Chat: E-Days Europapark Monitoring" />
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js" integrity="sha384-Akqfrbj/HpNVo8k11SXBb6TlBWmXXlYQrCSqEWmyKJe+hDm3Z/B2WVG4smwBkRVm" crossorigin="anonymous"></script>
+    <link rel="stylesheet" type="text/css" href="/static/main.css?v=3" />
+    <script src="/static/main.js?v=3" type="text/javascript" defer></script>
+  </head>
+  <body>
+    <div class="chat-app">{{ template "main" . }}</div>
+  </body>
+</html>
+{{ end }}

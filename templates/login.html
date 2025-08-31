@@ -1,0 +1,76 @@
+{{ define "main" }}
+<div id="loginScreen" class="login-screen">
+  <div class="header">
+    <h1>Simple Chat</h1>
+    <p>Join the conversation</p>
+  </div>
+
+  <div class="login-container">
+    <div class="login-header">
+      <h2>Welcome!</h2>
+      <p>Please enter your details to join the chat</p>
+    </div>
+
+    <form
+      class="login-form"
+      hx-post="/api/login"
+      hx-target="#loginResponse"
+      hx-swap="innerHTML"
+      hx-trigger="submit"
+      hx-on::after-request="handleLoginResponse(event)"
+    >
+      <div id="loginResponse"></div>
+
+      <div class="form-group">
+        <label for="nameInput" class="form-label">Your Name</label>
+        <input
+          type="text"
+          class="form-input"
+          id="nameInput"
+          name="name"
+          placeholder="Enter your name..."
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Gender</label>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input
+              type="radio"
+              name="gender"
+              value="male"
+              class="radio-input"
+            />
+            <span class="radio-custom"></span>
+            <span class="radio-label">Male</span>
+          </label>
+          <label class="radio-option">
+            <input
+              type="radio"
+              name="gender"
+              value="female"
+              class="radio-input"
+            />
+            <span class="radio-custom"></span>
+            <span class="radio-label">Female</span>
+          </label>
+          <label class="radio-option">
+            <input
+              type="radio"
+              name="gender"
+              value="other"
+              class="radio-input"
+            />
+            <span class="radio-custom"></span>
+            <span class="radio-label">Other</span>
+          </label>
+        </div>
+      </div>
+
+      <button type="submit" class="join-button">Join Chat</button>
+    </form>
+  </div>
+</div>
+{{ end }}
