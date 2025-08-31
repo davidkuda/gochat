@@ -64,3 +64,14 @@ func prepareTemplatePartialMessage() {
 	}
 	partialMsg = t
 }
+
+// func prepareTemplatePartialNewMember() {
+func prepareTemplatePartialNewMember() *template.Template {
+	tmpl := template.New("main")
+	t, err := tmpl.ParseFiles("./templates/partial.new-member.html")
+	if err != nil {
+		log.Fatalf("failed parsing templates: %e", err)
+	}
+	// partialMsg = t
+	return t
+}

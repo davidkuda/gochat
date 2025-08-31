@@ -202,6 +202,29 @@ body {
 	gap: 0.75rem;
 }
 
+/* start new member: */
+.system-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	color: #94a3b8;
+	font-size: 0.8125rem;
+	margin: 0.5rem 0 0.25rem 3rem; /* indent under avatars */
+}
+.system-row .dot {
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: 50%;
+	background: #22c55e;
+	box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.15);
+}
+.system-row .time {
+	margin-left: 0.4rem;
+	color: #64748b;
+}
+
+/* end new member: */
+
 .message-input {
 	flex: 1;
 	padding: 0.75rem 1rem;

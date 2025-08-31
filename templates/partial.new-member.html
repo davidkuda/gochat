@@ -1,0 +1,9 @@
+{{ define "main" }}
+<div id="messagesContainer" hx-swap-oob="beforeend">
+  <div class="system-row">
+    <span class="dot"></span>
+    <span><strong>{{ .Name }}</strong> ({{ .Gender }}) joined</span>
+    <span class="time">{{ .JoinedStr }}</span>
+  </div>
+</div>
+{{ end }}

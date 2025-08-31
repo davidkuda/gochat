@@ -13,6 +13,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -133,15 +134,32 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 }
 
 type Client struct {
-	Name   string
-	Gender string // Male Female Other
-	Conn   *websocket.Conn
-	mu     sync.Mutex
+	Name      string
+	Gender    string // Male Female Other
+	Joined    time.Time
+	JoinedStr string
+	Conn      *websocket.Conn
+	mu        sync.Mutex
 }
 
 type JoinRequest struct {
 	Name   string `json:"name"`
 	Gender string `json:"gender"`
+}
+
+type NewUserTemplate struct {
+	Name   string
+	Gender string
+	Time   string
+}
+
+func newNewUserTemplate(name, gender string) NewUserTemplate {
+	time := time.Now().Format("15:04")
+	return NewUserTemplate{
+		Name:   name,
+		Gender: gender,
+		Time:   time,
+	}
 }
 
 type MessageTemplate struct {
@@ -153,20 +171,18 @@ type MessageTemplate struct {
 }
 
 func newMessageTemplate(clientName, name, message string) MessageTemplate {
-	log.Println("ASIMOV:")
-	log.Println(clientName, name)
 	var own bool
 	if clientName == name {
 		own = true
 	}
 	time := time.Now().Format("15:04")
-
+	avatar := strings.ToUpper(string(name[0]))
 	return MessageTemplate{
 		Name:    name,
 		Message: message,
 		Own:     own,
 		Time:    time,
-		Avatar:  string(name[0]),
+		Avatar:  avatar,
 	}
 }
 
@@ -205,12 +221,6 @@ func broadcastMessage(msg WSMessage) {
 	}
 }
 
-func broadcastHTML(fragment string) {
-	for c := range clients {
-		_ = c.Conn.WriteMessage(websocket.TextMessage, []byte(fragment))
-	}
-}
-
 func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 	var msg string
 
@@ -244,18 +254,28 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("✅ user joined: name=%s gender=%s\n", req.Name, req.Gender)
 
-	c := &Client{Name: req.Name, Gender: req.Gender, Conn: conn}
+	now := time.Now()
+	c := &Client{
+		Name:      req.Name,
+		Gender:    req.Gender,
+		Conn:      conn,
+		Joined:    now,
+		JoinedStr: now.Format("15:04"),
+	}
 
 	clientsMu.Lock()
 	clients[c] = true
 	clientsMu.Unlock()
 
-	// joinsTotal.WithLabelValues(c.Gender).Inc()
-	msg = fmt.Sprintf("🟢 %s (%s) joined", c.Name, c.Gender)
-	frag := msgHTML(msg)
-	log.Printf("sending: %s", frag)
-	broadcastHTML(frag)
-	broadcast([]byte(msg))
+	newMemberTemplate := prepareTemplatePartialNewMember()
+	buf := bytes.Buffer{}
+	err = newMemberTemplate.ExecuteTemplate(&buf, "main", c)
+	if err != nil {
+		log.Println("failed executing message template:", err)
+		// TODO: to tired to do error handling here, its past midnight
+		return
+	}
+	broadcast(buf.Bytes())
 
 	for {
 		_, data, err := conn.ReadMessage()
