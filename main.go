@@ -296,11 +296,6 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		// messagesTotal.WithLabelValues(c.Gender).Inc()
-		// TODO:send htmx here
-		msg2 := fmt.Sprintf("%s: %s", c.Name, string(data))
-		log.Println(msg2)
-
 		var msg WSMessage
 		if err := json.Unmarshal(data, &msg); err != nil {
 			log.Println("unmarshal error:", err, string(data))
