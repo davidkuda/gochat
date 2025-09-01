@@ -1,3 +1,42 @@
+// === Mobile viewport & autoscroll helper (minimal, safe) ===============
+(function mobileViewportFix() {
+	const root = document.documentElement;
+	const msgs = () => document.getElementById("messagesContainer");
+
+	function setAppHeight() {
+		const vv = window.visualViewport;
+		const h = vv ? vv.height : window.innerHeight;
+		root.style.setProperty("--app-h", h + "px");
+	}
+
+	// Stick to bottom only if the user is already near the bottom
+	function nearBottom(el, threshold = 120) {
+		return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+	}
+	function scrollToBottom(force = false) {
+		const m = msgs();
+		if (!m) return;
+		if (force || nearBottom(m)) m.scrollTop = m.scrollHeight;
+	}
+
+	window.addEventListener("load", () => {
+		setAppHeight();
+		scrollToBottom(true);
+	});
+	window.addEventListener("resize", setAppHeight);
+	if (window.visualViewport)
+		visualViewport.addEventListener("resize", setAppHeight);
+	window.addEventListener("orientationchange", setAppHeight);
+
+	// When HTMX swaps in a new message, gently keep the list pinned
+	document.body.addEventListener("htmx:afterSwap", (e) => {
+		if (e.detail?.target?.id === "messagesContainer") scrollToBottom(false);
+	});
+	document.body.addEventListener("htmx:wsAfterMessage", () =>
+		scrollToBottom(false),
+	);
+})();
+
 // User data
 let userData = {
 	name: "",

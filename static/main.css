@@ -490,3 +490,53 @@ body {
 		gap: 0.5rem;
 	}
 }
+
+/* === Mobile stability patch (append-only) =============================== */
+:root {
+	--app-h: 100vh;
+} /* updated by JS to visual viewport height */
+
+.chat-app {
+	/* use the visual viewport so the keyboard shrinks the app instead of overlapping */
+	height: calc(var(--app-h) - 2rem);
+}
+
+@media (max-width: 768px) {
+	.chat-app {
+		height: calc(var(--app-h) - 1rem);
+	}
+}
+
+/* Keep the scroller flexible and prevent it from collapsing with keyboard */
+.messages-container {
+	min-height: 0; /* critical in flex layouts */
+	overscroll-behavior: contain;
+}
+
+/* Input bar stays in normal flow, fixed height, never stretches */
+.input-container {
+	flex-shrink: 0; /* don’t let it grow or shrink oddly */
+}
+
+/* iOS zoom prevention: any focused control must be >=16px */
+.input-form {
+	font-size: 16px;
+}
+.message-input,
+.form-input,
+.radio-label,
+.send-button {
+	font-size: 16px;
+}
+.message-input {
+	min-height: 44px;
+} /* comfortable tap target */
+.send-button {
+	min-width: 44px;
+	min-height: 44px;
+}
+
+/* Optional: resist layout jump when new messages land */
+.messages-container {
+	scroll-behavior: smooth;
+}
