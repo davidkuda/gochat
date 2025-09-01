@@ -1,3 +1,86 @@
+(function mobileUX() {
+	const root = document.documentElement;
+	const msgs = () => document.getElementById("messagesContainer");
+	const inputBar = () => document.querySelector(".input-container");
+
+	function setAppHeight() {
+		const vv = window.visualViewport;
+		const h = vv ? vv.height : window.innerHeight;
+		root.style.setProperty("--app-height", h + "px");
+	}
+
+	function setInputHeightVar() {
+		const el = inputBar();
+		if (!el) return;
+		root.style.setProperty(
+			"--input-h",
+			el.getBoundingClientRect().height + "px",
+		);
+	}
+
+	function nearBottom(container, threshold = 120) {
+		return (
+			container.scrollHeight - container.scrollTop - container.clientHeight <
+			threshold
+		);
+	}
+
+	function scrollToBottom(force = false) {
+		const m = msgs();
+		if (!m) return;
+		if (force || nearBottom(m)) {
+			m.scrollTop = m.scrollHeight;
+		}
+	}
+
+	// Initial measurements
+	window.addEventListener("load", () => {
+		setAppHeight();
+		setInputHeightVar();
+		scrollToBottom(true);
+	});
+
+	// Update on viewport changes (keyboard open/close, orientation)
+	if (window.visualViewport) {
+		visualViewport.addEventListener("resize", () => {
+			setAppHeight();
+			setInputHeightVar();
+		});
+	}
+	window.addEventListener("orientationchange", () => {
+		setAppHeight();
+		setInputHeightVar();
+	});
+	window.addEventListener("resize", () => {
+		setAppHeight();
+		setInputHeightVar();
+	});
+
+	// Recompute input height if fonts/styles load later
+	document.fonts &&
+		document.fonts.addEventListener &&
+		document.fonts.addEventListener("loadingdone", setInputHeightVar);
+
+	// Auto-scroll on new messages from HTMX swaps
+	document.body.addEventListener("htmx:afterSwap", (e) => {
+		if (
+			e.detail &&
+			e.detail.target &&
+			e.detail.target.id === "messagesContainer"
+		) {
+			scrollToBottom(false);
+		}
+	});
+
+	// Also when WS connects and on initial content
+	document.body.addEventListener("htmx:wsAfterMessage", () =>
+		scrollToBottom(false),
+	);
+
+	// Expose a tiny API if you need it elsewhere
+	window.chatView = { scrollToBottom };
+})();
+
 // User data
 let userData = {
 	name: "",
