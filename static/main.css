@@ -422,6 +422,30 @@ body {
 	user-select: none;
 }
 
+/* Subtle focus ring just on the circle */
+.radio-input:focus-visible + .radio-custom {
+	box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25); /* soft violet glow */
+	border-color: #8b5cf6;
+}
+
+/* Optional: slight background for the whole option when focused */
+.radio-option:has(.radio-input:focus-visible) {
+	background: #f3f0ff; /* very light violet */
+}
+
+/* Selected option background */
+.radio-option:has(.radio-input:checked) {
+	background: #f9f6ff; /* lighter, almost white with violet hint */
+}
+
+/* Keep existing checked dot + border */
+.radio-input:checked + .radio-custom {
+	border-color: #8b5cf6;
+}
+.radio-input:checked + .radio-custom::after {
+	background: #8b5cf6;
+}
+
 .join-button {
 	padding: 0.75rem 1.5rem;
 	background: linear-gradient(135deg, #8b5cf6, #a855f7);
