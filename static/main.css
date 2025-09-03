@@ -8,17 +8,17 @@ body {
 	font-family:
 		-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
 	background: linear-gradient(180deg, #fbfbfe, #f6f4f9);
-	min-height: 100vh;
 	padding: 1rem;
 	color: #1a1625;
+	height: 100dvh;
 }
 
 .chat-app {
 	max-width: 800px;
 	margin: 0 auto;
-	height: 100dvh;
 	display: flex;
 	flex-direction: column;
+	height: 98dvh;
 }
 
 .header {
@@ -475,10 +475,6 @@ body {
 		padding: 0.5rem;
 	}
 
-	.chat-app {
-		height: 100dvh;
-	}
-
 	.header h1 {
 		font-size: 1.5rem;
 	}
@@ -491,53 +487,4 @@ body {
 		flex-direction: column;
 		gap: 0.5rem;
 	}
-}
-
-/* === Mobile stability patch (append-only) =============================== */
-:root {
-	--app-h: 100vh;
-} /* updated by JS to visual viewport height */
-
-.chat-app {
-	height: 100dvh;
-}
-
-@media (max-width: 768px) {
-	.chat-app {
-		height: 100dvh;
-	}
-}
-
-/* Keep the scroller flexible and prevent it from collapsing with keyboard */
-.messages-container {
-	min-height: 0; /* critical in flex layouts */
-	overscroll-behavior: contain;
-}
-
-/* Input bar stays in normal flow, fixed height, never stretches */
-.input-container {
-	flex-shrink: 0; /* don’t let it grow or shrink oddly */
-}
-
-/* iOS zoom prevention: any focused control must be >=16px */
-.input-form {
-	font-size: 16px;
-}
-.message-input,
-.form-input,
-.radio-label,
-.send-button {
-	font-size: 16px;
-}
-.message-input {
-	min-height: 44px;
-} /* comfortable tap target */
-.send-button {
-	min-width: 44px;
-	min-height: 44px;
-}
-
-/* Optional: resist layout jump when new messages land */
-.messages-container {
-	scroll-behavior: smooth;
 }
