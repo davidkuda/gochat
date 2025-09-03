@@ -488,3 +488,12 @@ body {
 		gap: 0.5rem;
 	}
 }
+
+/* iOS zoom prevention: any focused control must be >=16px */
+.input-form,
+.message-input,
+.form-input,
+.radio-label,
+.send-button {
+	font-size: 16px;
+}
