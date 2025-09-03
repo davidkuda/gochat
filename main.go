@@ -1,6 +1,6 @@
 // TODO:
 // - [ ] what happens if two people use the same name? probably just an error in the map, but needs handling.
-// - [ ] number of users
+// - [ ] precompute partial templates
 
 package main
 
@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"html"
 	"html/template"
 	"log"
 	"net/http"
@@ -18,6 +17,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
@@ -33,7 +34,70 @@ var (
 	partialMsg *template.Template
 )
 
+var (
+	// Prometheus metrics (with gender label)
+	chatRendersTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "gochat_chat_renders_total",
+			Help: "total number of times the chat is rendered and sent to a client",
+		},
+		// success or error
+		[]string{"status"},
+	)
+	joinsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "gochat_joins_total",
+			Help: "Total number of chat joins, labeled by gender.",
+		},
+		[]string{"gender"},
+	)
+	usersOnline = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "gochat_users_online",
+			Help: "current number of users that are online in the chat",
+		},
+		[]string{"gender"},
+	)
+	messagesTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "gochat_messages_total",
+			Help: "Total number of chat messages, labeled by gender.",
+		},
+		[]string{"gender"},
+	)
+	broadcastMessageDuration = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name: "gochat_broadcast_duration_seconds",
+			Help: "duration of a sending a message to each connected client",
+		},
+	)
+)
+
 func main() {
+	chatRendersTotal.WithLabelValues("success")
+	chatRendersTotal.WithLabelValues("error")
+	joinsTotal.WithLabelValues("male")
+	joinsTotal.WithLabelValues("female")
+	joinsTotal.WithLabelValues("other")
+	usersOnline.WithLabelValues("male")
+	usersOnline.WithLabelValues("female")
+	usersOnline.WithLabelValues("other")
+	messagesTotal.WithLabelValues("male")
+	messagesTotal.WithLabelValues("female")
+	messagesTotal.WithLabelValues("other")
+
+	// Register metrics and expose /metrics
+	// instead of global registry, create your own (to prevent recording go_ process_ and httprom_ metrics)
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(
+		chatRendersTotal,
+		joinsTotal,
+		usersOnline,
+		messagesTotal,
+		// broadcastMessageDuration,
+	)
+	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+
 	addr := flag.String("addr", "localhost:8404", "HTTP network address")
 	flag.Parse()
 
@@ -88,6 +152,7 @@ func newChatTemplate(name, gender string) (ChatTemplate, error) {
 
 type WSMessage struct {
 	Name    string        `json:"name"`
+	Gender  string        `json:"gender"`
 	Message string        `json:"message"`
 	Headers WSMessageMeta `json:"HEADERS"`
 }
@@ -107,6 +172,7 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("failed newChatTemplate(%s, %s) during handling %s %s: %e\n", name, gender, r.Method, r.URL.Path, err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		chatRendersTotal.WithLabelValues("error").Inc()
 		return
 	}
 
@@ -119,6 +185,7 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("failed executing template during handling %s %s: %e\n", r.Method, r.URL.Path, err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			chatRendersTotal.WithLabelValues("error").Inc()
 			return
 		}
 	} else {
@@ -126,12 +193,14 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("failed executing template during handling %s %s: %e\n", r.Method, r.URL.Path, err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			chatRendersTotal.WithLabelValues("error").Inc()
 			return
 		}
 	}
 
 	w.WriteHeader(http.StatusOK)
 	buf.WriteTo(w)
+	chatRendersTotal.WithLabelValues("success").Inc()
 }
 
 type Client struct {
@@ -189,10 +258,6 @@ func newMessageTemplate(clientName, name, message string) MessageTemplate {
 	}
 }
 
-func msgHTML(text string) string {
-	return fmt.Sprintf(`<p id="messagesContainer" class="msg" hx-swap-oob="beforeend">%s</p>`, html.EscapeString(text))
-}
-
 func userCountHTML(n int) string {
 	txt := fmt.Sprintf("%d user", n)
 	if n != 1 {
@@ -213,6 +278,8 @@ func broadcast(data []byte) {
 }
 
 func broadcastMessage(msg WSMessage) {
+	start := time.Now()
+
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
 	for c := range clients {
@@ -231,6 +298,11 @@ func broadcastMessage(msg WSMessage) {
 
 		_ = c.Conn.WriteMessage(websocket.TextMessage, buf.Bytes())
 	}
+
+	// Observe latency
+	// optional: simulate heavy work:
+	// time.Sleep(time.Duration(300 * time.Millisecond))
+	broadcastMessageDuration.Observe(time.Since(start).Seconds())
 }
 
 func handleWebsocket(w http.ResponseWriter, r *http.Request) {
@@ -263,6 +335,8 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("✅ user joined: name=%s gender=%s\n", req.Name, req.Gender)
+	usersOnline.WithLabelValues(req.Gender).Inc()
+	joinsTotal.WithLabelValues(req.Gender).Inc()
 
 	now := time.Now()
 	c := &Client{
@@ -303,6 +377,7 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		broadcastMessage(msg)
+		messagesTotal.WithLabelValues(msg.Gender).Inc()
 	}
 
 	clientsMu.Lock()
@@ -322,7 +397,7 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	broadcast(byebuf.Bytes())
-	fragLeft := userCountHTML(len(clients))
-	broadcast([]byte(fragLeft))
-
+	newUserCount := userCountHTML(len(clients))
+	broadcast([]byte(newUserCount))
+	usersOnline.WithLabelValues(c.Gender).Dec()
 }
