@@ -399,5 +399,6 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 	broadcast(byebuf.Bytes())
 	newUserCount := userCountHTML(len(clients))
 	broadcast([]byte(newUserCount))
+	log.Printf("👋 bye user! name=%s gender=%s\n", c.Name, c.Gender)
 	usersOnline.WithLabelValues(c.Gender).Dec()
 }
