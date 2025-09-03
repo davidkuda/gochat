@@ -110,6 +110,7 @@ body {
 .messages-container {
 	display: flex;
 	flex-direction: column;
+	justify-content: flex-end;
 	flex: 1;
 	overflow-y: auto;
 	padding: 1rem;
